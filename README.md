@@ -3,6 +3,9 @@
 
 Compile all ejs files in bulk.
 
+## Installation
+`npm i ejs-all -g`
+
 
 ## Features
 
