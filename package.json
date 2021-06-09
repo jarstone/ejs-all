@@ -1,0 +1,26 @@
+{
+  "name": "ejs-all",
+  "description": "Compile all ejs files in bulk",
+  "keywords": [
+    "ejs",
+    "ejs compile",
+    "ejs watch",
+    "ejs folder",
+    "ejs bulk",
+    "ejs beautify"
+  ],
+  "version": "1.0.0",
+  "main": "index.js",
+  "bin": "index.js",
+  "repository": "https://github.com/jarstone/ejs-all.git",
+  "author": "jarstone <jarstone.official@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "chokidar": "^3.5.1",
+    "condense-newlines": "^0.2.1",
+    "gulp-ejs": "^5.1.0",
+    "gulp-rename": "^2.0.0",
+    "js-beautify": "^1.13.13",
+    "vinyl-fs": "^3.0.3"
+  }
+}
