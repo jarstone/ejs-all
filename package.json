@@ -18,9 +18,9 @@
   "dependencies": {
     "chokidar": "^3.5.1",
     "condense-newlines": "^0.2.1",
-    "gulp-ejs": "^5.1.0",
-    "gulp-rename": "^2.0.0",
-    "js-beautify": "^1.13.13",
-    "vinyl-fs": "^3.0.3"
+    "ejs": "^3.1.6",
+    "fast-glob": "^3.2.5",
+    "fs-extra": "^10.0.0",
+    "js-beautify": "^1.13.13"
   }
 }

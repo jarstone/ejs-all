@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 
-const fs = require('fs')
-const ejs = require('gulp-ejs')
-const rename = require('gulp-rename')
-const through = require('through2')
+const fs = require('fs-extra')
+const glob = require('fast-glob')
+const ejs = require('ejs')
 const path = require('path')
-const vfs = require('vinyl-fs')
 const chokidar = require('chokidar')
 const condense = require('condense-newlines')
 const beautify = require('js-beautify').html
@@ -31,36 +29,33 @@ class compiler {
     this.watch ? await this.watcher() : await this.render()
   }
 
+  async compile(file) {
+    log(`Processing: ${file}`)
+    return await new Promise(async resolve => {
+      let content = await ejs.renderFile(file, fs.readJsonSync(this.data))
+      content = condense(content)
+      content = beautify(content, {
+        indent_size: 2,
+        unformatted: ['pre', 'code'],
+      })
+      let dest = file.replace(this.input, this.output).slice(0, -3) + 'html'
+      fs.outputFile(dest, content).catch(err => log(err)).finally(resolve)
+    })
+  }
+
   async render() {
     const start = performance.now()
-    return await new Promise(resolve => {
-      vfs.src(this.target)
-        .on('data', (chunk) => log(`Processing ${chunk.path}`))
-        .pipe(ejs(JSON.parse(fs.readFileSync(this.data, 'utf-8'))))
-        .pipe(through.obj(function (file, _, cb) {
-          let content = file.contents.toString()
-          content = condense(content) // replace extraneous newlines with a single newline
-          content = beautify(content, {
-            indent_size: 2,
-            unformatted: ['pre', 'code'],
-          })
-          file.contents = Buffer.from(content)
-          cb(null, file)
-        }))
-        .pipe(rename({ extname: '.html' }))
-        .pipe(vfs.dest(this.output))
-        .on('end', () => {
-          log(`Done in ${Math.round(performance.now() - start)} ms`)
-          resolve()
-        })
-    })
+    await Promise.all((await glob(this.target)).map(file => this.compile(file)))
+    const finish = performance.now()
+    log(`Done in ${Math.round(finish - start)} ms`)
   }
 
   async watcher() {
     chokidar.watch(this.input, {
       ignoreInitial: true,
     })
-      .on('all', async (event, target) => {
+      .on('all', async (event, filePath) => {
+        const target = filePath.replace(/\\/g, '/')
         setTimeout(async () => {
           if ((event === 'add' || event === 'change') && target !== this.data) {
             const filename = path.basename(target)
@@ -84,17 +79,16 @@ class compiler {
     return await new Promise(async resolve => {
       const partial = path.parse(target).name
       let targets = []
-      await new Promise(resolve => {
-        vfs.src(`${this.input}/**/!(_*).ejs`)
-          .pipe(through.obj(function (file, _, cb) {
-            let content = file.contents.toString().match(/include\(\s*(['"])(.+?)\1\s*(,\s*({.+?})\s*)?\)/g)
-            content = content ? content.join('') : ''
-            if (content.includes(partial + "'") || content.includes(partial + '"')) {
-              targets.push(file.path)
-            }
-            cb(null, file)
-          }))
-          .on('finish', () => resolve())
+      await new Promise(async resolve => {
+        const files = await glob(`${this.input}/**/!(_*).ejs`)
+        files.forEach(file => {
+          let content = fs.readFileSync(file, 'utf-8').match(/include\(\s*(['"])(.+?)\1\s*(,\s*({.+?})\s*)?\)/g)
+          content = content ? content.join('') : ''
+          if (content.includes(partial + "'") || content.includes(partial + '"')) {
+            targets.push(file)
+          }
+          resolve()
+        })
       })
       this.target = targets
       resolve()
